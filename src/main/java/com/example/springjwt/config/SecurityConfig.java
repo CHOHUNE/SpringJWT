@@ -1,21 +1,36 @@
 package com.example.springjwt.config;
 
 
+import com.example.springjwt.jwt.LoginFilter;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@AllArgsConstructor
 public class SecurityConfig {
+
+    private final AuthenticationConfiguration authenticationConfiguration;
+
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration)throws Exception {
+        return configuration.getAuthenticationManager();
     }
 
     @Bean
@@ -43,8 +58,15 @@ public class SecurityConfig {
                 .sessionManagement((session) -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+        http
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class);
+    //addFilterAt() , addFilterAfter(), addFilterBefore() 여러가지가 있는데
+    // 지금 구현하는 예제에서는 unsernamePasswordAuthenticationFilter를 대체해서 사용할 것이기 때문에
+    // 딱 해당 위치에 대체하는 addFilterAt을 쓴다
+    // 첫 번째 파라메터에는 직접 만든 필터, 두번 째 파라메터엔 대체할 위치인 필터 클래스를 적는다
 
-
+        // 로그인 필터는 생성자주입으로 AuthenticationManager 객체를 주입받아서 여기에서도 직접 주입을 해줘야 한다.
+        // 빈으로 메서드 생성을 하는데 매니저 또한 컨피규레이션을 주입 받아야 해서 그 부분은 생성자 주입을 해준다
         return http.build();
 
     }
