@@ -79,6 +79,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/login", "/", "/join").permitAll()
                         .requestMatchers("/admin").hasRole("ADMIN")
+                        .requestMatchers("/reissue").permitAll()
                         .anyRequest().authenticated() //이외의 요청에는 인증이 필요하다 ( 로그인 )
                 );
 
