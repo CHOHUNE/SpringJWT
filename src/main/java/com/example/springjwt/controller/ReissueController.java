@@ -1,7 +1,9 @@
 package com.example.springjwt.controller;
 
 
+import com.example.springjwt.entity.RefreshEntity;
 import com.example.springjwt.jwt.JWTUtil;
+import com.example.springjwt.repository.RefreshRepository;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,15 +16,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Date;
+
 @RestController
 @RequiredArgsConstructor
 public class ReissueController {
     // 해당 컨트롤러는 JWT를 받고, 검증하고, 새로운 JWT를 발급해야 해서 아래 클래스를 주입 받아야 한다.
     private final JWTUtil jwtUtil;
 
+    private final RefreshRepository refreshRepository;
+
     @PostMapping("/reissue")
     public ResponseEntity<?> resissue(HttpServletRequest request, HttpServletResponse response) {
-
 
         String refresh = null;
         Cookie[] cookies = request.getCookies();
@@ -55,6 +60,14 @@ public class ReissueController {
             return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
         }
 
+        //DB에 저장 되어 있는지 확인
+        Boolean isExist = refreshRepository.existsByRefresh(refresh);
+        if (!isExist) {
+
+            //response body
+            return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
+        }
+
         String username = jwtUtil.getUsername(refresh);
         String role = jwtUtil.getRole(refresh);
 
@@ -62,13 +75,27 @@ public class ReissueController {
         String newAccess = jwtUtil.createJwt("access", username, role, 6000000L);
         String newRefresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
+        //Refresh 토큰 저장 DB에 기존의 Refresh 토큰 삭제 후 새 Refresh 토큰 저장
+        refreshRepository.deleteByRefresh(refresh);
+        addRefreshEntity(username, newRefresh, 86400000L);
+
         //response
         response.setHeader("access", newAccess);
         response.addCookie(createCookie("refresh",newRefresh));
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
 
+    private void addRefreshEntity(String username, String refresh, long expiredMs) {
+        Date date = new Date(System.currentTimeMillis() + expiredMs);
 
+        RefreshEntity refreshEntity = new RefreshEntity();
+
+        refreshEntity.setUsername(username);
+        refreshEntity.setRefresh(refresh);
+        refreshEntity.setExpiration(date.toString());
+
+        refreshRepository.save(refreshEntity);
     }
 
     private Cookie createCookie(String key, String value) {

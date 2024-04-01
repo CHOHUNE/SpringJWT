@@ -4,6 +4,7 @@ package com.example.springjwt.config;
 import com.example.springjwt.jwt.JWTFilter;
 import com.example.springjwt.jwt.JWTUtil;
 import com.example.springjwt.jwt.LoginFilter;
+import com.example.springjwt.repository.RefreshRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
     private final JWTUtil jwtUtil;
+    private final RefreshRepository refreshRepository;
 
 
     @Bean
@@ -91,7 +93,7 @@ public class SecurityConfig {
         http
                 .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration),jwtUtil), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration),jwtUtil,refreshRepository), UsernamePasswordAuthenticationFilter.class);
     //addFilterAt() , addFilterAfter(), addFilterBefore() 여러가지가 있는데
     // 지금 구현하는 예제에서는 unsernamePasswordAuthenticationFilter를 대체해서 사용할 것이기 때문에
     // 딱 해당 위치에 대체하는 addFilterAt을 쓴다
